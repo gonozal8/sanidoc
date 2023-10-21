@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# convert images back to PDF with optional OCR:
+#
+# read a tar archive of image files from stdin,
+# convert each image file to a PDF file,
+# merge those files into a single PDF,
+# send the final PDF to stdout
+#
+
+if [ -t 0 ]; then
+	echo "error: stdin is connected to a terminal. aborting." 1>&2
+	exit 1
+fi
+if [ -t 1 ]; then
+	echo "error: stdout is connected to a terminal. aborting." 1>&2
+	exit 1
+fi
+
+TMPDIR=$(mktemp -d)
+if [ $? -ne 0 -o ! -d "$TMPDIR" ]; then
+	echo "error: could not create temp dir." 1>&2
+	exit 1
+fi
+
+echo "debug: TMPDIR $TMPDIR" 1>&2
+cd -- "$TMPDIR" || exit 1
+
+echo "debug: extracting files..." 1>&2
+tar --strip-components=0 -xv
+if [ $? -ne 0 ]; then
+	echo "error: could not untar input. aborting." 1>&2
+	exit 1
+fi
+
+echo "debug: converting PPM files to PDF..." 1>&2
+for F in *.ppm; do
+	gm convert $F pdf:$F.pdf
+	if [ $? -ne 0 ]; then
+		echo "error: could not convert $F" 1>&2
+		EXIT=1
+	else
+		PDFS="$PDFS $F.pdf"
+	fi
+done
+
+#ls $PDFS 1>&2
+
+echo "debug: merging PDF files..." 1>&2
+pdfunite $PDFS out.pdf
+if [ $? -eq 0 -a -f out.pdf ]; then
+	cat out.pdf
+else
+	echo "error: could not merge PDF pages. aborting." 1>&2
+	exit 1
+fi
