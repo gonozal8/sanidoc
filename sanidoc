@@ -1,13 +1,9 @@
 #!/bin/bash
 
-MYNAME=sanidoc
-
 set -o pipefail
 
-IMG=dz2
-
+MYNAME=sanidoc
 INFILE=/dev/stdin
-
 PODMAN="podman run --read-only --rm --network=none --cap-drop=ALL -i $MYNAME"
 
 if [ -z "$1" ]; then
@@ -32,7 +28,8 @@ fi
 #./stage1 < "$INFILE" | ./stage2
 
 $PODMAN /opt/$MYNAME/stage1 < "$INFILE" | $PODMAN /opt/$MYNAME/stage2
-if [ $? -ne 0 ]; then
+EXIT=$?
+if [ $EXIT -ne 0 ]; then
 	echo "error: conversion failed." 1>&2
-	exit $?
+	exit $EXIT
 fi

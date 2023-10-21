@@ -4,19 +4,19 @@
 # send a tar archive of these images to stdout
 #
 
-if [ -t 0 -o -t 1 ]; then
+if [ -t 0 ] || [ -t 1 ]; then
 	echo "error: stdin or stdout is a terminal. aborting." 1>&2
 	exit 1
 fi
 
 TMPDIR=$(mktemp -d)
-if [ $? -ne 0 -o ! -d "$TMPDIR" ]; then
+if [ $? -ne 0 ] || [ ! -d "$TMPDIR" ]; then
 	echo "error: could not create temp dir. aborting." 1>&2
 	exit 1
 fi
 
 INFILE=$(mktemp)
-cat - > $INFILE
+cat - > "$INFILE"
 
 #echo "debug: converting with LibreOffice..." 1>&2
 #libreoffice --headless --safe-mode --convert-to pdf --outdir $TMPDIR/ $INFILE 1>&2
@@ -28,13 +28,18 @@ echo "debug: using raw input PDF..." 1>&2
 cp -- "$INFILE" "$TMPDIR/input.pdf"
 
 echo "debug: converting from PDF to PPM..." 1>&2
-pdftoppm $TMPDIR/*.pdf $TMPDIR/page
+pdftoppm "$TMPDIR"/*.pdf "$TMPDIR"/page
 
 #ls -Fla $TMPDIR/* 1>&2
 
-cd $TMPDIR
+# shellcheck disable=SC2164
+cd -- "$TMPDIR"
+if [ $? -ne 0 ]; then
+	echo "error: could not change directory to TMPDIR. aborting." 1>&2
+	exit 1
+fi
+
 echo "debug: tarring PPM files..." 1>&2
-#tar -cf a.tar stage2.d/page-*.ppm
 tar -c page-*.ppm
 if [ $? -ne 0 ]; then
 	echo "error: could not create tar." 1>&2

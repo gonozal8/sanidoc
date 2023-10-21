@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # convert images back to PDF with optional OCR:
 #
@@ -18,7 +18,7 @@ if [ -t 1 ]; then
 fi
 
 TMPDIR=$(mktemp -d)
-if [ $? -ne 0 -o ! -d "$TMPDIR" ]; then
+if [ $? -ne 0 ] || [ ! -d "$TMPDIR" ]; then
 	echo "error: could not create temp dir." 1>&2
 	exit 1
 fi
@@ -34,21 +34,26 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "debug: converting PPM files to PDF..." 1>&2
+PDFS=()
 for F in *.ppm; do
-	gm convert $F pdf:$F.pdf
+	gm convert "$F" "pdf:$F.pdf"
 	if [ $? -ne 0 ]; then
-		echo "error: could not convert $F" 1>&2
-		EXIT=1
+		echo "warning: could not convert \"$F\"" 1>&2
 	else
-		PDFS="$PDFS $F.pdf"
+		PDFS+=("$F.pdf")
 	fi
 done
 
 #ls $PDFS 1>&2
 
+if [ "${#PDFS[*]}" -eq 0 ]; then
+	echo "error: no resulting PDF documents. aborting." 1>&2
+	exit 1
+fi
+
 echo "debug: merging PDF files..." 1>&2
-pdfunite $PDFS out.pdf
-if [ $? -eq 0 -a -f out.pdf ]; then
+pdfunite "${PDFS[@]}" out.pdf
+if [ $? -eq 0 ] && [ -f out.pdf ]; then
 	cat out.pdf
 else
 	echo "error: could not merge PDF pages. aborting." 1>&2
